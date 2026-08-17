@@ -1,0 +1,33 @@
+# Git & IDE
+.git
+.gitignore
+.idea
+.vscode
+.gemini
+
+# Node / Build artifacts
+node_modules
+frontend/node_modules
+dist
+frontend/dist
+
+# Python Caches & Virtual Envs
+__pycache__
+*.pyc
+env
+venv
+geo3d_backend/env
+geo3d_backend/venv
+
+# Databases & Storage
+*.db
+*.sqlite
+*.sqlite3
+geo3d_backend/db.sqlite3
+geo3d_backend/storage/uploads/*
+geo3d_backend/storage/extracted/*
+*.slpk
+*.SLPK
+
+# Legacy Backend Ignore
+backend/

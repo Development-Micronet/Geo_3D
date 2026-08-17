@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [73.8567, 18.5204, 560]
+      },
+      "properties": {
+        "name": "Pune City Center",
+        "description": "Sample GeoJSON Point Landmark"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [73.84, 18.51, 0],
+          [73.86, 18.53, 0],
+          [73.88, 18.52, 0]
+        ]
+      },
+      "properties": {
+        "name": "Pune Sample Route"
+      }
+    }
+  ]
+}

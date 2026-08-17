@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Sample KML Document</name>
+    <Placemark>
+      <name>Mumbai Gateway Landmark</name>
+      <description>Sample KML Placemark</description>
+      <Point>
+        <coordinates>72.8347,18.9220,10</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>Mumbai Coastal Boundary</name>
+      <LineString>
+        <coordinates>
+          72.82,18.90,0
+          72.83,18.92,0
+          72.84,18.95,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>

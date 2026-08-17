@@ -1,0 +1,90 @@
+# ==========================================
+# Legacy / Old Backend Directory
+# ==========================================
+backend/
+
+# ==========================================
+# 1. Databases & SQLite Persistent Files
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+geo3d.db
+backend/geo3d.db
+geo3d_backend/db.sqlite3
+users.db
+
+# ==========================================
+# 2. Environment Variables & Secrets
+# ==========================================
+.env
+.env.local
+.env.*.local
+geo3d_backend/.env
+frontend/.env
+!.env.example
+!geo3d_backend/.env.example
+!frontend/.env.example
+*.pem
+*.key
+
+# ==========================================
+# 3. SLPK & Extracted 3D Storage Files
+# ==========================================
+*.slpk
+*.SLPK
+*.tif
+*.dem
+backend/storage/uploads/*
+backend/storage/extracted/*
+geo3d_backend/storage/uploads/*
+geo3d_backend/storage/extracted/*
+!geo3d_backend/storage/uploads/.gitkeep
+!geo3d_backend/storage/extracted/.gitkeep
+
+# ==========================================
+# 4. Node / Frontend Build Outputs
+# ==========================================
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+dist-ssr/
+frontend/dist-ssr/
+*.local
+
+# ==========================================
+# 5. Python / Virtual Envs & Caches
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+backend/env/
+backend/venv/
+geo3d_backend/env/
+geo3d_backend/venv/
+
+# ==========================================
+# 6. Logs & Temporary Files
+# ==========================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+*.tmp
+
+# ==========================================
+# 7. IDE, System & Agent Artifacts
+# ==========================================
+.gemini/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
