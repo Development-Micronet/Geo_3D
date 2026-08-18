@@ -44,14 +44,15 @@ def _check_admin(request):
 
 
 # --- Health Check ---
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
 def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
 # --- Authentication ---
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "OPTIONS"])
 def login_view(request):
     body = _get_json_body(request)
     username = body.get("username")
@@ -78,7 +79,7 @@ def login_view(request):
 
 # --- Users Management ---
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET", "POST", "OPTIONS"])
 def users_view(request):
     admin = _check_admin(request)
     if not admin:
@@ -134,7 +135,7 @@ def users_view(request):
 
 
 @csrf_exempt
-@require_http_methods(["PUT"])
+@require_http_methods(["PUT", "OPTIONS"])
 def user_permissions_view(request, user_id):
     admin = _check_admin(request)
     if not admin:
@@ -157,7 +158,7 @@ def user_permissions_view(request, user_id):
 
 
 @csrf_exempt
-@require_http_methods(["DELETE"])
+@require_http_methods(["DELETE", "OPTIONS"])
 def user_detail_view(request, user_id):
     admin = _check_admin(request)
     if not admin:
@@ -178,31 +179,38 @@ def user_detail_view(request, user_id):
 
 
 # --- Package Listing & Deletion ---
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
 def packages_view(request):
     pkgs = storage.list_packages()
-    data = [
-        {
+    data = []
+    for p in pkgs:
+        layer_url = p.layer_url
+        if layer_url and layer_url.startswith("/"):
+            layer_url = request.build_absolute_uri(layer_url)
+        data.append({
             "id": p.id,
             "filename": p.filename,
             "size_bytes": p.size_bytes,
             "status": p.status,
-            "error": p.error
-        }
-        for p in pkgs
-    ]
+            "error": p.error,
+            "layer_url": layer_url
+        })
     return JsonResponse(data, safe=False)
 
 
 @csrf_exempt
-@require_http_methods(["GET", "DELETE"])
+@require_http_methods(["GET", "DELETE", "OPTIONS"])
 def package_detail_view(request, package_id):
     pkg = storage.get_package(package_id)
     if pkg is None:
         return JsonResponse({"detail": "Package not found"}, status=404)
 
     if request.method == "GET":
-        return JsonResponse(pkg.to_dict())
+        data = pkg.to_dict()
+        if data.get("layer_url") and data["layer_url"].startswith("/"):
+            data["layer_url"] = request.build_absolute_uri(data["layer_url"])
+        return JsonResponse(data)
 
     elif request.method == "DELETE":
         ok = storage.delete_package(package_id)
@@ -227,7 +235,8 @@ def _run_extraction(package_id: str) -> None:
         info = read_scene_layer_info(layer_root)
         rel = layer_root.relative_to(dest_dir)
         rel_str = "" if str(rel) == "." else f"/{rel.as_posix()}"
-        pkg.layer_url = f"{settings.PUBLIC_BASE_URL}/api/layers/{package_id}{rel_str}"
+        base_prefix = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
+        pkg.layer_url = f"{base_prefix}/api/layers/{package_id}{rel_str}"
         pkg.scene_layer_info = info
         pkg.status = "ready"
     except SlpkExtractionError as e:
@@ -241,7 +250,7 @@ def _run_extraction(package_id: str) -> None:
 
 
 @csrf_exempt
-@require_http_methods(["POST"])
+@require_http_methods(["POST", "OPTIONS"])
 def upload_view(request):
     if "file" not in request.FILES:
         return JsonResponse({"detail": "No file uploaded"}, status=400)
@@ -299,7 +308,8 @@ def _resolve_layer_directory(target: Path):
     return None
 
 
-@require_http_methods(["GET"])
+@csrf_exempt
+@require_http_methods(["GET", "OPTIONS"])
 def serve_layer_resource(request, package_id: str, resource_path: str = ""):
     pkg = storage.get_package(package_id)
     if pkg is None or pkg.status != "ready":

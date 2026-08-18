@@ -257,7 +257,7 @@ export default function App() {
               className="responsive-tools-group"
               style={{
                 ...topNavToolsGroupStyle,
-                marginLeft: 180,
+                marginLeft: 16,
               }}
             >
               {/* 🥞 Add Data Button */}
@@ -595,6 +595,8 @@ const topNavToolsGroupStyle = {
   alignItems: "center",
   gap: 6,
   overflowX: "auto",
+  scrollbarWidth: "none",
+  msOverflowStyle: "none",
   flex: 1,
   minWidth: 0,
 };

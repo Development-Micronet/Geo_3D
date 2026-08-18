@@ -1,10 +1,22 @@
 export function getApiBase() {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const protocol = typeof window !== "undefined" && window.location.protocol ? window.location.protocol : "http:";
+  const hostname = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
+
   if (envUrl && envUrl.trim() !== "") {
-    return envUrl.trim().replace(/\/+$/, "");
+    let clean = envUrl.trim().replace(/\/+$/, "");
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      try {
+        const u = new URL(clean);
+        if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
+          u.hostname = hostname;
+          return u.toString().replace(/\/+$/, "");
+        }
+      } catch (e) {}
+    }
+    return clean;
   }
-  const protocol = window.location.protocol || "http:";
-  const hostname = window.location.hostname || "localhost";
+
   return `${protocol}//${hostname}:8000`;
 }
 
@@ -13,6 +25,9 @@ export const API_BASE = getApiBase();
 export function resolveLayerUrl(url) {
   if (!url) return url;
   const currentBase = getApiBase();
+  if (url.startsWith("/")) {
+    return `${currentBase}${url}`;
+  }
   if (url.startsWith("http://") || url.startsWith("https://")) {
     try {
       const parsedUrl = new URL(url);

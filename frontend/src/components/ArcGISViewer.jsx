@@ -2,6 +2,16 @@ import React, { useEffect, useImperativeHandle, forwardRef, useRef } from "react
 import "@arcgis/core/assets/esri/themes/dark/main.css";
 import esriConfig from "@arcgis/core/config";
 esriConfig.apiKey = import.meta.env.VITE_ARCGIS_API_KEY || ""; // Optional API Key for Esri services, defaults to empty for local SLPKs
+if (typeof window !== "undefined" && esriConfig?.request?.corsEnabledServers) {
+  const currentHost = window.location.hostname;
+  if (currentHost && !esriConfig.request.corsEnabledServers.includes(`${currentHost}:8000`)) {
+    esriConfig.request.corsEnabledServers.push(
+      `${currentHost}:8000`,
+      "localhost:8000",
+      "127.0.0.1:8000"
+    );
+  }
+}
 esriConfig.request.interceptors.push({
   urls: [/arcgis\.com/i, /wayback/i, /esri/i],
   before: function (params) {

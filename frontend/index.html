@@ -85,10 +85,23 @@
         border-radius: 6px !important;
       }
 
+      /* Hide scrollbar in top navbar tools */
+      .responsive-tools-group::-webkit-scrollbar,
+      .responsive-top-navbar::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+      .responsive-tools-group,
+      .responsive-top-navbar {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+      }
+
       /* ─── Global Responsive Media Queries ─── */
       @media (max-width: 1280px) {
         .responsive-tools-group {
-          margin-left: 80px !important;
+          margin-left: 12px !important;
         }
       }
       @media (max-width: 1024px) {

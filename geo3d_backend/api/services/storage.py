@@ -95,7 +95,8 @@ def rebuild_index_from_disk() -> None:
                 info = read_scene_layer_info(layer_root)
                 rel = layer_root.relative_to(dest_dir)
                 rel_str = "" if str(rel) == "." else f"/{rel.as_posix()}"
-                layer_url = f"{settings.PUBLIC_BASE_URL}/api/layers/{package_id}{rel_str}"
+                base_prefix = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
+                layer_url = f"{base_prefix}/api/layers/{package_id}{rel_str}"
                 pkg = PackageDetail(
                     id=package_id,
                     filename=filename,

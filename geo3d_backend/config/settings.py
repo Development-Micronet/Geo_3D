@@ -128,11 +128,25 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# --- Complete CORS Configuration ---
+# --- Complete CORS & CSRF Configuration ---
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 APPEND_SLASH = False
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://192.168.*",
+    "http://10.*",
+    "http://172.*",
+]
+
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = False
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -160,13 +174,14 @@ CORS_EXPOSE_HEADERS = [
     "content-type",
     "content-length",
     "content-range",
+    "access-control-allow-origin",
 ]
 
 # SLPK GIS Storage Configuration
 UPLOAD_DIR = Path(os.getenv("SLPK_UPLOAD_DIR", BASE_DIR / "storage" / "uploads"))
 EXTRACT_DIR = Path(os.getenv("SLPK_EXTRACT_DIR", BASE_DIR / "storage" / "extracted"))
 MAX_UPLOAD_SIZE = int(os.getenv("SLPK_MAX_UPLOAD_SIZE", 2 * 1024 * 1024 * 1024))
-PUBLIC_BASE_URL = os.getenv("SLPK_PUBLIC_BASE_URL", "http://localhost:8000")
+PUBLIC_BASE_URL = os.getenv("SLPK_PUBLIC_BASE_URL", "")
 
 for _d in (UPLOAD_DIR, EXTRACT_DIR):
     _d.mkdir(parents=True, exist_ok=True)
