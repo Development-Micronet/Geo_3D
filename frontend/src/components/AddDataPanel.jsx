@@ -1,5 +1,7 @@
 import React, { useState, useRef } from "react";
+import { FolderOpen, Upload } from "lucide-react";
 import { SUPPORTED_GIS_FORMATS } from "../services/formats.js";
+import { PanelShell, PanelHeader, FieldLabel, selectField } from "./ui/Panel.jsx";
 
 export default function AddDataPanel({ onUploadData, uploadProgress, onClose }) {
   const [selectedFormatId, setSelectedFormatId] = useState("all");
@@ -16,49 +18,57 @@ export default function AddDataPanel({ onUploadData, uploadProgress, onClose }) 
   }
 
   return (
-    <div style={panelContainerStyle}>
-      {/* Panel Header */}
-      <div style={panelHeaderStyle}>
-        <div style={panelTitleStyle}>
-          <span>🥞</span> Add GIS Data Layer
-        </div>
-        <button onClick={onClose} style={closeBtnStyle} title="Close Add Data Panel">
-          ✕
-        </button>
-      </div>
+    <PanelShell className="w-[320px] sm:w-[340px]">
+      {/* ── Header ── */}
+      <PanelHeader
+        icon={Upload}
+        title="Add GIS data layer"
+        onClose={onClose}
+      />
 
-      {/* Upload Progress Banner */}
+      {/* ── Upload progress ── */}
       {uploadProgress !== null && uploadProgress !== undefined && (
-        <div style={uploadProgressBannerStyle}>
-          ⏳ Uploading Dataset… {typeof uploadProgress === "number" ? `${uploadProgress}%` : ""}
+        <div className="border-b border-line bg-accent/10 px-3.5 py-2">
+          <div className="mb-1.5 flex items-center justify-between text-[10.5px] font-semibold text-accent">
+            <span>Uploading dataset…</span>
+            {typeof uploadProgress === "number" && (
+              <span className="tabular font-mono">{uploadProgress}%</span>
+            )}
+          </div>
+          <div className="h-1 overflow-hidden rounded-full bg-surface-4">
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-300"
+              style={{ width: `${typeof uploadProgress === "number" ? uploadProgress : 0}%` }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Panel Content */}
-      <div style={panelBodyStyle}>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 11, color: "#cbd5e1", fontWeight: 600, marginBottom: 5 }}>
-            GIS Format Filter:
+      {/* ── Body ── */}
+      <div className="flex flex-col p-3.5">
+        <div className="mb-3">
+          <label className="mb-1.5 block">
+            <FieldLabel>Format filter</FieldLabel>
           </label>
           <select
             value={selectedFormatId}
             onChange={(e) => setSelectedFormatId(e.target.value)}
-            style={selectDropdownStyle}
+            className={`${selectField} truncate`}
           >
             {SUPPORTED_GIS_FORMATS.map((fmt) => (
-              <option key={fmt.id} value={fmt.id} style={{ background: "#0f172a", color: "#fff" }}>
+              <option key={fmt.id} value={fmt.id} className="bg-surface-1 text-ink">
                 {fmt.label}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Hidden Input */}
+        {/* Hidden input */}
         <input
           ref={fileInputRef}
           type="file"
           accept={currentFormat.accept}
-          style={{ display: "none" }}
+          className="hidden"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               handleFileSelected(e.target.files[0]);
@@ -67,13 +77,10 @@ export default function AddDataPanel({ onUploadData, uploadProgress, onClose }) 
           }}
         />
 
-        {/* Drag and Drop Zone */}
+        {/* Drop zone */}
         <div
-          style={{
-            ...dropZoneStyle,
-            borderColor: isDragging ? "#38bdf8" : "rgba(255, 255, 255, 0.25)",
-            background: isDragging ? "rgba(56, 189, 248, 0.18)" : "rgba(255, 255, 255, 0.04)",
-          }}
+          role="button"
+          tabIndex={0}
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragging(true);
@@ -87,122 +94,39 @@ export default function AddDataPanel({ onUploadData, uploadProgress, onClose }) 
             }
           }}
           onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+          }}
+          className={`mb-3 cursor-pointer rounded-xl border-2 border-dashed px-3 py-6 text-center transition-colors ${
+            isDragging
+              ? "border-accent bg-accent/12"
+              : "border-line-strong bg-white/[0.02] hover:border-accent/50 hover:bg-white/[0.05]"
+          }`}
         >
-          <div style={{ fontSize: 32, marginBottom: 6 }}>📥</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff", marginBottom: 2 }}>
-            Drag & Drop GIS files here
-          </div>
-          <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 600, marginBottom: 8 }}>
-            or click to browse files
-          </div>
-          <div style={{ fontSize: 10, color: "#94a3b8", lineHeight: 1.4 }}>
-            Supported Formats: .slpk, .kml, .kmz, .geojson, .shp, .zip, .tif, .dem, .csv, .3ds, .gltf
-          </div>
+          <Upload
+            size={26}
+            className={`mx-auto mb-2 transition-colors ${
+              isDragging ? "text-accent" : "text-ink-faint"
+            }`}
+            strokeWidth={1.6}
+          />
+          <div className="text-[12.5px] font-semibold text-ink">Drop GIS files here</div>
+          <div className="mt-0.5 text-[11px] font-medium text-accent">or click to browse</div>
+          <p className="mx-auto mt-2.5 max-w-[240px] text-[10px] leading-relaxed text-ink-faint">
+            .slpk .kml .kmz .geojson .shp .zip .tif .dem .csv .3ds .gltf
+          </p>
         </div>
 
-        {/* Action Button */}
+        {/* Action */}
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
-          style={browseBtnStyle}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-[12px] font-semibold text-surface-0 transition-colors hover:bg-accent-soft"
         >
-          📁 Browse Files
+          <FolderOpen size={14} />
+          Browse files
         </button>
       </div>
-    </div>
+    </PanelShell>
   );
 }
-
-/* ─── Styles ─── */
-
-const panelContainerStyle = {
-  width: 340,
-  background: "rgba(12, 16, 28, 0.95)",
-  border: "1px solid rgba(255, 255, 255, 0.18)",
-  borderRadius: 12,
-  boxShadow: "0 16px 40px rgba(0, 0, 0, 0.6)",
-  color: "#ffffff",
-  overflow: "hidden",
-  display: "flex",
-  flexDirection: "column",
-  pointerEvents: "auto",
-};
-
-const panelHeaderStyle = {
-  padding: "10px 14px",
-  background: "rgba(20, 28, 46, 0.9)",
-  borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-};
-
-const panelTitleStyle = {
-  fontSize: 13.5,
-  fontWeight: 800,
-  color: "#ffffff",
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-};
-
-const closeBtnStyle = {
-  background: "transparent",
-  border: "none",
-  color: "#94a3b8",
-  cursor: "pointer",
-  fontSize: 14,
-  padding: "2px 6px",
-  borderRadius: 4,
-  transition: "all 0.15s ease",
-};
-
-const uploadProgressBannerStyle = {
-  background: "rgba(56, 189, 248, 0.9)",
-  color: "#fff",
-  padding: "7px 10px",
-  fontSize: 11,
-  fontWeight: 700,
-  textAlign: "center",
-};
-
-const panelBodyStyle = {
-  padding: 14,
-  display: "flex",
-  flexDirection: "column",
-};
-
-const selectDropdownStyle = {
-  width: "100%",
-  background: "rgba(15, 23, 42, 0.95)",
-  color: "#edf2f7",
-  border: "1px solid rgba(255, 255, 255, 0.18)",
-  borderRadius: 6,
-  padding: "7px 10px",
-  fontSize: 11.5,
-  outline: "none",
-  cursor: "pointer",
-};
-
-const dropZoneStyle = {
-  border: "2px dashed rgba(255, 255, 255, 0.25)",
-  borderRadius: 10,
-  padding: "20px 12px",
-  textAlign: "center",
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-  marginBottom: 12,
-};
-
-const browseBtnStyle = {
-  width: "100%",
-  background: "linear-gradient(135deg, #38bdf8, #0284c7)",
-  border: "none",
-  borderRadius: 8,
-  color: "#ffffff",
-  fontSize: 12,
-  fontWeight: 700,
-  padding: "10px",
-  cursor: "pointer",
-  boxShadow: "0 4px 14px rgba(56, 189, 248, 0.35)",
-  transition: "all 0.2s ease",
-};

@@ -48,7 +48,7 @@ def extract_slpk(slpk_path: Path, dest_dir: Path) -> Path:
                 raw = zf.read(entry.filename)
                 data = _maybe_gunzip_bytes(raw)
 
-                out_name = entry.filename
+                out_name = entry.filename.replace("\\", "/")
                 if out_name.endswith(".gz"):
                     out_name = out_name[: -len(".gz")]
 
@@ -68,19 +68,27 @@ def extract_slpk(slpk_path: Path, dest_dir: Path) -> Path:
 
 
 def _find_layer_root(dest_dir: Path) -> Optional[Path]:
-    """Find directory containing 3dSceneLayer.json."""
+    """Find directory containing 3dSceneLayer.json (case-insensitive)."""
     direct = dest_dir / "3dSceneLayer.json"
     if direct.exists():
         return dest_dir
-    matches = list(dest_dir.rglob("3dSceneLayer.json"))
-    if matches:
-        return matches[0].parent
+    for item in dest_dir.rglob("*"):
+        if item.is_file() and item.name.lower() == "3dscenelayer.json":
+            return item.parent
     return None
 
 
 def read_scene_layer_info(layer_root: Path) -> Dict[str, Any]:
     """Parse 3dSceneLayer.json for lightweight metadata to show in the UI."""
-    scene_layer_path = layer_root / "3dSceneLayer.json"
+    scene_layer_path = None
+    if layer_root.exists():
+        for p in layer_root.iterdir():
+            if p.is_file() and p.name.lower() == "3dscenelayer.json":
+                scene_layer_path = p
+                break
+    if scene_layer_path is None:
+        scene_layer_path = layer_root / "3dSceneLayer.json"
+
     try:
         with open(scene_layer_path, "r", encoding="utf-8") as f:
             full = json.load(f)

@@ -48,7 +48,6 @@ import ImageElement from "@arcgis/core/layers/support/ImageElement";
 import ExtentAndRotationGeoreference from "@arcgis/core/layers/support/ExtentAndRotationGeoreference";
 import Daylight from "@arcgis/core/widgets/Daylight";
 import LineOfSight from "@arcgis/core/widgets/LineOfSight";
-import Slice from "@arcgis/core/widgets/Slice";
 import ElevationProfile from "@arcgis/core/widgets/ElevationProfile";
 import DirectLineMeasurement3D from "@arcgis/core/widgets/DirectLineMeasurement3D";
 import AreaMeasurement3D from "@arcgis/core/widgets/AreaMeasurement3D";
@@ -213,7 +212,7 @@ function createGraphicsFromGeoJson(geojson) {
   return graphics;
 }
 
-const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
+const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick, onCursorMove, isLoggedIn = true }, ref) {
   const mapDivRef = useRef(null);
   const viewRef = useRef(null);
   const compassContainerRef = useRef(null);
@@ -230,6 +229,11 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
   const areaMeasurementsRef = useRef([]);
   const areaDrawingStateRef = useRef({ active: false, points: [], unit: "square-meters", callback: null });
   const areaPreviewGraphicRef = useRef(null);
+  const elevationHoverGraphicRef = useRef(null);
+  const onCursorMoveRef = useRef(onCursorMove);
+  onCursorMoveRef.current = onCursorMove;
+  const isLoggedInRef = useRef(isLoggedIn);
+  isLoggedInRef.current = isLoggedIn;
 
   useEffect(() => {
     if (!mapDivRef.current) return;
@@ -280,9 +284,9 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
       },
       camera: {
         position: {
-          x: 73.8567,
-          y: 18.5204,
-          z: 18000000,
+          x: 78.9629,
+          y: 20.5937,
+          z: 22000000,
         },
         heading: 0,
         tilt: 0,
@@ -305,10 +309,39 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
       }
     });
 
-    // Click handler for AOI Drawing & Feature Picking
+    // Click handler for AOI Drawing, Feature Picking & Hold Coordinates
     view.on("click", async (event) => {
-
+      if (!isLoggedIn) return;
       const aoiState = aoiDrawingStateRef.current;
+      const distActive = distanceDrawingStateRef.current?.active;
+      const areaActive = areaDrawingStateRef.current?.active;
+
+      // When clicking on map and not actively drawing, dispatch hold coordinates event
+      if (!aoiState.active && !distActive && !areaActive) {
+        let pt = event.mapPoint;
+        if (!pt) {
+          try {
+            pt = view.toMap({ x: event.x, y: event.y });
+          } catch (e) {
+            pt = null;
+          }
+        }
+        if (pt && (pt.latitude !== undefined || pt.longitude !== undefined || pt.x !== undefined)) {
+          const lat = pt.latitude !== undefined ? pt.latitude : pt.y;
+          const lon = pt.longitude !== undefined ? pt.longitude : pt.x;
+          const elev = pt.z !== undefined && pt.z !== null ? pt.z : 0;
+          const clickCoords = {
+            lat,
+            lon,
+            elevation: elev,
+            x: pt.x,
+            y: pt.y,
+            z: pt.z,
+            spatialReference: pt.spatialReference?.wkid || 4326,
+          };
+          window.dispatchEvent(new CustomEvent("geo3d:hold-coordinates", { detail: clickCoords }));
+        }
+      }
 
       if (aoiState.active && event.mapPoint) {
         event.stopPropagation();
@@ -1029,7 +1062,32 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
 
     // Real-time pointer move preview for Distance, Area, AOI rectangle, circle, line, and polygon
     view.on("pointer-move", (event) => {
-      const currentPt = view.toMap({ x: event.x, y: event.y });
+      let currentPt = null;
+      try {
+        currentPt = view.toMap({ x: event.x, y: event.y });
+      } catch (e) {
+        currentPt = null;
+      }
+
+      if (currentPt && (currentPt.latitude !== undefined || currentPt.longitude !== undefined || currentPt.x !== undefined)) {
+        const lat = currentPt.latitude !== undefined ? currentPt.latitude : currentPt.y;
+        const lon = currentPt.longitude !== undefined ? currentPt.longitude : currentPt.x;
+        const elev = currentPt.z !== undefined && currentPt.z !== null ? currentPt.z : 0;
+        const coords = {
+          lat,
+          lon,
+          elevation: elev,
+          x: currentPt.x,
+          y: currentPt.y,
+          z: currentPt.z,
+          spatialReference: currentPt.spatialReference?.wkid || 4326,
+        };
+        onCursorMoveRef.current?.(coords);
+        window.dispatchEvent(new CustomEvent("geo3d:cursor-coordinates", { detail: coords }));
+      } else {
+        onCursorMoveRef.current?.(null);
+      }
+
       if (!currentPt || currentPt.longitude === undefined) return;
 
       // Distance pointer-move rubberband
@@ -1214,6 +1272,87 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
       }
     });
 
+    // Two-finger touch gestures: pinch/spread to zoom in & zoom out on mobile & tabs
+    let isPinching = false;
+    let lastTouchDistance = 0;
+    let lastMidpoint = { x: 0, y: 0 };
+
+    const getTouchDistance = (t1, t2) => {
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      return Math.hypot(dx, dy);
+    };
+
+    const getTouchMidpoint = (t1, t2, rect) => {
+      const x = (t1.clientX + t2.clientX) / 2 - rect.left;
+      const y = (t1.clientY + t2.clientY) / 2 - rect.top;
+      return { x, y };
+    };
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        const rect = containerEl.getBoundingClientRect();
+        lastTouchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+        lastMidpoint = getTouchMidpoint(e.touches[0], e.touches[1], rect);
+      } else {
+        isPinching = false;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isPinching || e.touches.length !== 2 || !viewRef.current) return;
+      e.preventDefault();
+
+      const rect = containerEl.getBoundingClientRect();
+      const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+      const currentMidpoint = getTouchMidpoint(e.touches[0], e.touches[1], rect);
+
+      if (lastTouchDistance > 0 && currentDistance > 0) {
+        const scale = currentDistance / lastTouchDistance;
+        const distDiff = Math.abs(currentDistance - lastTouchDistance);
+
+        if (distDiff > 0.6 && scale > 0.01 && scale < 100) {
+          const view = viewRef.current;
+          const camera = view.camera ? view.camera.clone() : null;
+
+          if (camera) {
+            // scale > 1 (spreading fingers) = Zoom In (lower altitude)
+            // scale < 1 (pinching fingers) = Zoom Out (higher altitude)
+            const zoomFactor = Math.pow(scale, 1.4);
+            const currentAlt = camera.position.z;
+            const newAlt = Math.max(15, Math.min(25000000, currentAlt / zoomFactor));
+            camera.position.z = newAlt;
+
+            // Pan smoothly with touch midpoint translation
+            const dMidX = currentMidpoint.x - lastMidpoint.x;
+            const dMidY = currentMidpoint.y - lastMidpoint.y;
+            if (Math.abs(dMidX) > 0.5 || Math.abs(dMidY) > 0.5) {
+              const panScale = currentAlt / 45000000;
+              camera.position.x -= dMidX * panScale;
+              camera.position.y += dMidY * panScale;
+            }
+
+            view.goTo(camera, { animate: false }).catch(() => {});
+          }
+        }
+      }
+
+      lastTouchDistance = currentDistance;
+      lastMidpoint = currentMidpoint;
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+        lastTouchDistance = 0;
+      }
+    };
+
+    const handleGesturePrevent = (e) => {
+      e.preventDefault();
+    };
+
     // Mouse Middle Button Drag to Tilt & Rotate
     let isMiddleDragging = false;
     let lastMiddleX = 0;
@@ -1249,8 +1388,20 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
       }
     };
 
+    const handleMouseLeave = () => {
+      onCursorMoveRef.current?.(null);
+    };
+
     const containerEl = mapDivRef.current;
     containerEl.addEventListener("pointerdown", handlePointerDown);
+    containerEl.addEventListener("mouseleave", handleMouseLeave);
+    containerEl.addEventListener("touchstart", handleTouchStart, { passive: false });
+    containerEl.addEventListener("touchmove", handleTouchMove, { passive: false });
+    containerEl.addEventListener("touchend", handleTouchEnd, { passive: true });
+    containerEl.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+    containerEl.addEventListener("gesturestart", handleGesturePrevent, { passive: false });
+    containerEl.addEventListener("gesturechange", handleGesturePrevent, { passive: false });
+
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
 
@@ -1258,6 +1409,14 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
 
     return () => {
       containerEl.removeEventListener("pointerdown", handlePointerDown);
+      containerEl.removeEventListener("mouseleave", handleMouseLeave);
+      containerEl.removeEventListener("touchstart", handleTouchStart);
+      containerEl.removeEventListener("touchmove", handleTouchMove);
+      containerEl.removeEventListener("touchend", handleTouchEnd);
+      containerEl.removeEventListener("touchcancel", handleTouchEnd);
+      containerEl.removeEventListener("gesturestart", handleGesturePrevent);
+      containerEl.removeEventListener("gesturechange", handleGesturePrevent);
+
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       if (viewRef.current) {
@@ -1266,6 +1425,53 @@ const ArcGISViewer = forwardRef(function ArcGISViewer({ onPick }, ref) {
       }
     };
   }, [onPick]);
+
+  // Handle lock / unlock navigation and camera reset based on login status
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    if (!isLoggedIn) {
+      const stopEvent = (e) => {
+        e.stopPropagation();
+      };
+
+      const handles = [
+        view.on("drag", stopEvent),
+        view.on("mouse-wheel", stopEvent),
+        view.on("double-click", stopEvent),
+        view.on("double-click", ["Control"], stopEvent),
+        view.on("pinch", stopEvent),
+        view.on("key-down", (e) => {
+          const prohibited = [
+            "+", "-", "_", "=", "ArrowUp", "ArrowDown", "ArrowRight", "ArrowLeft",
+            "PageUp", "PageDown", "Home", "End", "j", "k", "u", "i"
+          ];
+          if (prohibited.includes(e.key)) {
+            e.stopPropagation();
+          }
+        }),
+      ];
+
+      // Smoothly fly to full globe view when not logged in
+      view.goTo(
+        {
+          position: {
+            x: 78.9629,
+            y: 20.5937,
+            z: 22000000,
+          },
+          heading: 0,
+          tilt: 0,
+        },
+        { duration: 1200 }
+      ).catch(() => {});
+
+      return () => {
+        handles.forEach((h) => h?.remove?.());
+      };
+    }
+  }, [isLoggedIn]);
 
   function clearActiveWidget() {
     if (activeWidgetRef.current && viewRef.current) {
@@ -1396,8 +1602,8 @@ function calculateLayerExtent(layer) {
 }
 
 // Helper to fly to any layer or extent using exact stable extent navigation
-async function navigateToLayer(view, layer) {
-  if (!view || !layer) return;
+async function navigateToLayer(view, layer, isLoggedIn = true) {
+  if (!view || !layer || !isLoggedIn) return;
 
   try {
     if (layer.load && !layer.loaded) {
@@ -1453,7 +1659,8 @@ async function navigateToLayer(view, layer) {
 
       try {
         await sceneLayer.load();
-        if (sceneLayer.fullExtent) {
+        // Only zoom in if the user exists/is logged in and the layer has an extent
+        if (isLoggedInRef.current && sceneLayer.fullExtent) {
           await view.goTo(sceneLayer.fullExtent.clone(), { duration: 2000 });
         }
       } catch (e) {
@@ -1750,9 +1957,9 @@ async function navigateToLayer(view, layer) {
             await layer.load().catch(() => {});
           }
 
-          // Exact SLPK zoomin logic applied to all formats
+          // Only zoom into the layer if user is logged in and layer exists
           const targetExtent = layer.customExtent || layer.fullExtent || calculateLayerExtent(layer);
-          if (targetExtent) {
+          if (isLoggedInRef.current && targetExtent) {
             await view.goTo(targetExtent.expand(1.2), { duration: 2500 });
           }
         }
@@ -1810,13 +2017,13 @@ async function navigateToLayer(view, layer) {
     async flyToLayer(layerId) {
       const view = viewRef.current;
       const layer = layersRef.current[layerId] || layersRef.current[String(layerId)] || layersRef.current[Number(layerId)];
-      if (!view || !layer) return;
-      await navigateToLayer(view, layer);
+      if (!view || !layer || !isLoggedInRef.current) return;
+      await navigateToLayer(view, layer, isLoggedInRef.current);
     },
 
     async goToLocation(target, options = {}) {
       const view = viewRef.current;
-      if (!view || !target) return;
+      if (!view || !target || !isLoggedInRef.current) return;
       try {
         if (target.xmin !== undefined && target.ymin !== undefined) {
           let ext = target;
@@ -1858,6 +2065,21 @@ async function navigateToLayer(view, layer) {
         callback: cb,
       };
       view.container.style.cursor = "crosshair";
+    },
+
+    stopAoiDrawing() {
+      const view = viewRef.current;
+      aoiDrawingStateRef.current = {
+        active: false,
+        mode: null,
+        points: [],
+        startPoint: null,
+        options: {},
+        callback: null,
+      };
+      if (view && view.container) {
+        view.container.style.cursor = "default";
+      }
     },
 
     finishAoiDrawing() {
@@ -2054,38 +2276,6 @@ async function navigateToLayer(view, layer) {
       }
     },
 
-    startSlice(containerEl) {
-      const view = viewRef.current;
-      if (!view) return null;
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (view.ui) view.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
-      }
-      try {
-        const opts = { view: view };
-        if (containerEl) opts.container = containerEl;
-        const slice = new Slice(opts);
-        activeWidgetRef.current = slice;
-        return slice;
-      } catch (e) {
-        console.warn("Slice init:", e);
-        return null;
-      }
-    },
-
-    clearSlice() {
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (viewRef.current?.ui) viewRef.current.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
-      }
-    },
-
     startLineOfSight(containerEl) {
       const view = viewRef.current;
       if (!view) return null;
@@ -2109,12 +2299,8 @@ async function navigateToLayer(view, layer) {
     },
 
     clearLineOfSight() {
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (viewRef.current?.ui) viewRef.current.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
+      if (activeWidgetRef.current?.viewModel) {
+        try { activeWidgetRef.current.viewModel.clear(); } catch (e) {}
       }
     },
 
@@ -2157,12 +2343,8 @@ async function navigateToLayer(view, layer) {
     },
 
     clearDistanceMeasurement() {
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (viewRef.current?.ui) viewRef.current.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
+      if (activeWidgetRef.current?.viewModel) {
+        try { activeWidgetRef.current.viewModel.clear(); } catch (e) {}
       }
     },
 
@@ -2207,12 +2389,8 @@ async function navigateToLayer(view, layer) {
     },
 
     clearAreaMeasurement() {
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (viewRef.current?.ui) viewRef.current.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
+      if (activeWidgetRef.current?.viewModel) {
+        try { activeWidgetRef.current.viewModel.clear(); } catch (e) {}
       }
     },
 
@@ -2222,10 +2400,15 @@ async function navigateToLayer(view, layer) {
       }
     },
 
-    startElevationProfile(containerEl) {
+    startElevationProfile(containerEl, onProfileUpdate) {
       const view = viewRef.current;
       if (!view) return null;
       if (activeWidgetRef.current) {
+        if (activeWidgetRef.current._watcherHandles) {
+          activeWidgetRef.current._watcherHandles.forEach((h) => {
+            try { h.remove(); } catch (e) {}
+          });
+        }
         try {
           if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
           else if (view.ui) view.ui.remove(activeWidgetRef.current);
@@ -2240,6 +2423,66 @@ async function navigateToLayer(view, layer) {
         if (containerEl) opts.container = containerEl;
         const elev = new ElevationProfile(opts);
         activeWidgetRef.current = elev;
+
+        if (elev.viewModel) {
+          const syncData = () => {
+            if (!onProfileUpdate) return;
+            const vm = elev.viewModel;
+            const groundLine = vm.profiles?.find((p) => p.type === "ground") || vm.profiles?.getItemAt?.(0);
+            const viewLine = vm.profiles?.find((p) => p.type === "view") || vm.profiles?.getItemAt?.(1);
+
+            const formatSamples = (line) => {
+              if (!line?.samples) return [];
+              return line.samples.map((s, idx) => {
+                const dist = typeof s.distance === "number" ? s.distance : (s.x || 0);
+                const elevVal = typeof s.elevation === "number" ? s.elevation : (s.y || s.z || 0);
+                const lon = s.longitude !== undefined ? s.longitude : (s.x !== undefined && Math.abs(s.x) <= 180 ? s.x : (s.geometry?.longitude || null));
+                const lat = s.latitude !== undefined ? s.latitude : (s.y !== undefined && Math.abs(s.y) <= 90 ? s.y : (s.geometry?.latitude || null));
+                return {
+                  id: idx,
+                  distance: dist,
+                  elevation: elevVal,
+                  x: s.x,
+                  y: s.y,
+                  z: s.z,
+                  longitude: lon,
+                  latitude: lat,
+                };
+              });
+            };
+
+            const groundSamples = formatSamples(groundLine);
+            const viewSamples = formatSamples(viewLine);
+
+            onProfileUpdate({
+              state: vm.state,
+              progress: vm.progress,
+              groundSamples,
+              viewSamples,
+              statistics: groundLine?.statistics || null,
+              viewStatistics: viewLine?.statistics || null,
+              input: vm.input,
+            });
+          };
+
+          const handles = [];
+          if (elev.viewModel.profiles) {
+            elev.viewModel.profiles.forEach((profile) => {
+              if (profile?.watch) {
+                handles.push(profile.watch("samples", syncData));
+                handles.push(profile.watch("statistics", syncData));
+                handles.push(profile.watch("progress", syncData));
+              }
+            });
+          }
+          if (elev.viewModel.watch) {
+            handles.push(elev.viewModel.watch("state", syncData));
+            handles.push(elev.viewModel.watch("progress", syncData));
+            handles.push(elev.viewModel.watch("input", syncData));
+          }
+          elev._watcherHandles = handles;
+        }
+
         return elev;
       } catch (e) {
         console.warn("Elevation init:", e);
@@ -2247,13 +2490,74 @@ async function navigateToLayer(view, layer) {
       }
     },
 
+    setElevationHoverPoint(coord) {
+      const view = viewRef.current;
+      if (!view) return;
+      if (!coord) {
+        if (elevationHoverGraphicRef.current && measurementsLayerRef.current) {
+          measurementsLayerRef.current.remove(elevationHoverGraphicRef.current);
+          elevationHoverGraphicRef.current = null;
+        }
+        return;
+      }
+      let pt = null;
+      if (coord.longitude !== null && coord.longitude !== undefined && coord.latitude !== null && coord.latitude !== undefined) {
+        pt = new Point({
+          longitude: Number(coord.longitude),
+          latitude: Number(coord.latitude),
+          z: Number(coord.elevation || coord.z || 0),
+          spatialReference: { wkid: 4326 },
+        });
+      } else if (coord.x !== undefined && coord.y !== undefined) {
+        pt = new Point({
+          x: coord.x,
+          y: coord.y,
+          z: coord.z || coord.elevation || 0,
+          spatialReference: view.spatialReference || { wkid: 4326 },
+        });
+      }
+      if (!pt) return;
+
+      if (!elevationHoverGraphicRef.current) {
+        const markerSymbol = new SimpleMarkerSymbol({
+          style: "circle",
+          color: [0, 210, 255, 0.9],
+          size: 14,
+          outline: {
+            color: [255, 255, 255, 1],
+            width: 2.5,
+          },
+        });
+        const graphic = new Graphic({
+          geometry: pt,
+          symbol: markerSymbol,
+        });
+        elevationHoverGraphicRef.current = graphic;
+        if (measurementsLayerRef.current) {
+          measurementsLayerRef.current.add(graphic);
+        }
+      } else {
+        elevationHoverGraphicRef.current.geometry = pt;
+        if (measurementsLayerRef.current && !measurementsLayerRef.current.graphics.includes(elevationHoverGraphicRef.current)) {
+          measurementsLayerRef.current.add(elevationHoverGraphicRef.current);
+        }
+      }
+    },
+
+    clearElevationHoverPoint() {
+      if (elevationHoverGraphicRef.current && measurementsLayerRef.current) {
+        measurementsLayerRef.current.remove(elevationHoverGraphicRef.current);
+        elevationHoverGraphicRef.current = null;
+      }
+    },
+
     clearElevationProfile() {
-      if (activeWidgetRef.current) {
-        try {
-          if (typeof activeWidgetRef.current.destroy === "function") activeWidgetRef.current.destroy();
-          else if (viewRef.current?.ui) viewRef.current.ui.remove(activeWidgetRef.current);
-        } catch (e) {}
-        activeWidgetRef.current = null;
+      if (elevationHoverGraphicRef.current && measurementsLayerRef.current) {
+        measurementsLayerRef.current.remove(elevationHoverGraphicRef.current);
+        elevationHoverGraphicRef.current = null;
+      }
+      if (activeWidgetRef.current?.viewModel) {
+        try { activeWidgetRef.current.viewModel.clear(); } catch (e) {}
       }
     },
 
@@ -2264,6 +2568,17 @@ async function navigateToLayer(view, layer) {
     },
 
     clearAllAnalysis() {
+      aoiDrawingStateRef.current = {
+        active: false,
+        mode: null,
+        points: [],
+        startPoint: null,
+        options: {},
+        callback: null,
+      };
+      if (viewRef.current && viewRef.current.container) {
+        viewRef.current.container.style.cursor = "default";
+      }
       if (measurementsLayerRef.current) {
         measurementsLayerRef.current.removeAll();
       }
@@ -2307,8 +2622,6 @@ async function navigateToLayer(view, layer) {
           widget = new Daylight({ ...opts, playSliderSpeed: 5 });
         } else if (widgetType === "lineOfSight") {
           widget = new LineOfSight(opts);
-        } else if (widgetType === "slice") {
-          widget = new Slice(opts);
         } else if (widgetType === "elevationProfile") {
           widget = new ElevationProfile(opts);
         } else if (widgetType === "distance") {
@@ -2364,7 +2677,7 @@ async function navigateToLayer(view, layer) {
         });
         view.map.add(geojsonLayer);
         geojsonLayer.load().then(() => {
-          if (geojsonLayer.fullExtent) {
+          if (isLoggedInRef.current && geojsonLayer.fullExtent) {
             view.goTo(geojsonLayer.fullExtent);
           }
         });
@@ -2375,11 +2688,28 @@ async function navigateToLayer(view, layer) {
         });
         view.map.add(kmlLayer);
         kmlLayer.load().then(() => {
-          if (kmlLayer.fullExtent) {
+          if (isLoggedInRef.current && kmlLayer.fullExtent) {
             view.goTo(kmlLayer.fullExtent);
           }
         });
       }
+    },
+
+    resetToGlobeView() {
+      const view = viewRef.current;
+      if (!view) return;
+      view.goTo(
+        {
+          position: {
+            x: 78.9629,
+            y: 20.5937,
+            z: 22000000,
+          },
+          heading: 0,
+          tilt: 0,
+        },
+        { duration: 1500 }
+      ).catch(() => {});
     },
   }));
 
@@ -2398,81 +2728,49 @@ async function navigateToLayer(view, layer) {
   };
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
-      
-      {/* Compass Widget Panel: Square Icon + Small Reset North Text Badge */}
-      <div style={compassPanelStyle}>
-        <button
-          style={squareCompassBtnStyle}
-          onClick={resetNorth}
-          title="Reset camera orientation to North (Heading 0°, Tilt 0°)"
-        >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: "#0f172a", fontFamily: "sans-serif", letterSpacing: "0.5px" }}>N</span>
-            <svg width="12" height="14" viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginTop: 1 }}>
-              <path d="M6 0L11 14L6 10L1 14L6 0Z" fill="#0f172a" />
-              <path d="M6 0L6 10L1 14L6 0Z" fill="#2563eb" />
-            </svg>
-          </div>
-        </button>
+    <div className={`relative h-full w-full ${!isLoggedIn ? "pointer-events-none select-none" : ""}`}>
+      <div ref={mapDivRef} className="h-full w-full touch-none select-none" style={{ touchAction: "none" }} />
 
-        <button
-          style={resetNorthTextStyle}
-          onClick={resetNorth}
-          title="Reset camera orientation to North"
-        >
-          Reset North
-        </button>
-      </div>
+      {/* Floating compass control: north indicator + reset action (only when logged in) */}
+      {isLoggedIn && (
+        <div className="pointer-events-auto absolute bottom-6 right-4 z-[100] flex flex-col items-center gap-1.5 sm:right-6">
+          <button
+            type="button"
+            onClick={resetNorth}
+            title="Reset camera orientation to North (Heading 0°, Tilt 0°)"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface-2/85 text-ink shadow-float backdrop-blur-xl transition-colors hover:bg-surface-3"
+          >
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-[10px] font-bold tracking-wide text-ink">N</span>
+              <svg
+                width="11"
+                height="13"
+                viewBox="0 0 12 14"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="mt-0.5"
+              >
+                <path d="M6 0L11 14L6 10L1 14L6 0Z" fill="currentColor" className="text-ink-faint" />
+                <path d="M6 0L6 10L1 14L6 0Z" fill="#139dd8ff" />
+              </svg>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={resetNorth}
+            title="Reset camera orientation to North"
+            className="whitespace-nowrap rounded-md border border-line bg-surface-2/85 px-2 py-1 text-[9.5px] font-semibold uppercase tracking-wider text-ink-muted shadow-float backdrop-blur-xl transition-colors hover:bg-surface-3 hover:text-accent"
+          >
+            Reset north
+          </button>
+        </div>
+      )}
 
       {/* Esri compass widget ref container */}
       <div ref={compassContainerRef} style={{ display: "none" }} />
     </div>
   );
 });
-
-const compassPanelStyle = {
-  position: "absolute",
-  bottom: 24,
-  right: 24,
-  zIndex: 100,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: 5,
-  pointerEvents: "auto",
-};
-
-const squareCompassBtnStyle = {
-  width: 36,
-  height: 36,
-  background: "#ffffff",
-  border: "1px solid rgba(0, 0, 0, 0.2)",
-  borderRadius: 8,
-  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.15s ease",
-  outline: "none",
-};
-
-const resetNorthTextStyle = {
-  background: "rgba(15, 23, 42, 0.88)",
-  border: "1px solid rgba(255, 255, 255, 0.2)",
-  color: "#90cdf4",
-  padding: "3px 8px",
-  borderRadius: 4,
-  fontSize: 10,
-  fontWeight: 700,
-  cursor: "pointer",
-  letterSpacing: "0.5px",
-  whiteSpace: "nowrap",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-  backdropFilter: "blur(4px)",
-  transition: "all 0.15s ease",
-};
 
 export default ArcGISViewer;

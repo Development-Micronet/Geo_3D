@@ -73,53 +73,84 @@ def delete_package(package_id: str) -> bool:
 def rebuild_index_from_disk() -> None:
     """Rebuild the in-memory index from files on disk."""
     upload_dir = settings.UPLOAD_DIR
-    if not upload_dir.exists():
-        return
+    extract_dir = settings.EXTRACT_DIR
 
     from api.services.slpk_extractor import read_scene_layer_info, _find_layer_root
 
-    for upload_file in upload_dir.iterdir():
-        if upload_file.is_dir() or not upload_file.name.endswith(".slpk"):
-            continue
+    # 1. Scan UPLOAD_DIR
+    if upload_dir.exists():
+        for upload_file in upload_dir.iterdir():
+            if upload_file.is_dir() or not upload_file.name.endswith(".slpk"):
+                continue
 
-        parts = upload_file.name.split("_", 1)
-        if len(parts) != 2:
-            continue
-        package_id, filename = parts
+            parts = upload_file.name.split("_", 1)
+            if len(parts) != 2:
+                continue
+            package_id, filename = parts
 
-        dest_dir = extract_path_for(package_id)
-        layer_root = _find_layer_root(dest_dir)
+            dest_dir = extract_path_for(package_id)
+            layer_root = _find_layer_root(dest_dir)
 
-        if layer_root is not None:
-            try:
-                info = read_scene_layer_info(layer_root)
-                rel = layer_root.relative_to(dest_dir)
-                rel_str = "" if str(rel) == "." else f"/{rel.as_posix()}"
-                base_prefix = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
-                layer_url = f"{base_prefix}/api/layers/{package_id}{rel_str}"
+            if layer_root is not None:
+                try:
+                    info = read_scene_layer_info(layer_root)
+                    rel = layer_root.relative_to(dest_dir)
+                    rel_str = "" if str(rel) == "." else f"/{rel.as_posix()}"
+                    base_prefix = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
+                    rel_url_path = f"{base_prefix}/api/layers/{package_id}{rel_str}"
+                    if not rel_url_path.endswith("/"):
+                        rel_url_path += "/"
+                    pkg = PackageDetail(
+                        id=package_id,
+                        filename=filename,
+                        size_bytes=upload_file.stat().st_size,
+                        status="ready",
+                        layer_url=rel_url_path,
+                        scene_layer_info=info,
+                    )
+                    _packages[package_id] = pkg
+                except Exception:
+                    pkg = PackageDetail(
+                        id=package_id,
+                        filename=filename,
+                        size_bytes=upload_file.stat().st_size,
+                        status="error",
+                        error="Failed to reconstruct metadata on startup",
+                    )
+                    _packages[package_id] = pkg
+            else:
                 pkg = PackageDetail(
                     id=package_id,
                     filename=filename,
                     size_bytes=upload_file.stat().st_size,
-                    status="ready",
-                    layer_url=layer_url,
-                    scene_layer_info=info,
+                    status="uploaded",
                 )
                 _packages[package_id] = pkg
-            except Exception:
-                pkg = PackageDetail(
-                    id=package_id,
-                    filename=filename,
-                    size_bytes=upload_file.stat().st_size,
-                    status="error",
-                    error="Failed to reconstruct metadata on startup",
-                )
-                _packages[package_id] = pkg
-        else:
-            pkg = PackageDetail(
-                id=package_id,
-                filename=filename,
-                size_bytes=upload_file.stat().st_size,
-                status="uploaded",
-            )
-            _packages[package_id] = pkg
+
+    # 2. Scan EXTRACT_DIR for any packages not indexed via upload_dir
+    if extract_dir.exists():
+        for item in extract_dir.iterdir():
+            if not item.is_dir() or item.name in _packages:
+                continue
+            package_id = item.name
+            layer_root = _find_layer_root(item)
+            if layer_root is not None:
+                try:
+                    info = read_scene_layer_info(layer_root)
+                    rel = layer_root.relative_to(item)
+                    rel_str = "" if str(rel) == "." else f"/{rel.as_posix()}"
+                    base_prefix = settings.PUBLIC_BASE_URL.rstrip("/") if settings.PUBLIC_BASE_URL else ""
+                    rel_url_path = f"{base_prefix}/api/layers/{package_id}{rel_str}"
+                    if not rel_url_path.endswith("/"):
+                        rel_url_path += "/"
+                    pkg = PackageDetail(
+                        id=package_id,
+                        filename=f"package_{package_id}.slpk",
+                        size_bytes=0,
+                        status="ready",
+                        layer_url=rel_url_path,
+                        scene_layer_info=info,
+                    )
+                    _packages[package_id] = pkg
+                except Exception:
+                    pass

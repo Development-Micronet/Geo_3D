@@ -1,9 +1,16 @@
 import React, { useState } from "react";
+import { AlertTriangle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { login } from "../services/auth";
+
+const LOGO_URL = "/logo.png";
+
+const fieldClass =
+  "w-full rounded-lg border border-line bg-white/[0.04] px-3.5 py-2.5 text-[13px] font-medium text-ink outline-none transition-colors placeholder:text-ink-faint hover:border-line-strong focus:border-accent focus:bg-surface-1";
 
 export default function LoginModal({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,25 +33,35 @@ export default function LoginModal({ onLogin }) {
   }
 
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        {/* Header */}
-        <div style={modalHeaderStyle}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div className="w-full max-w-[380px] overflow-hidden rounded-2xl border border-line bg-surface-2/95 ">
+        {/* ── Header ── */}
+        <div className="flex flex-col items-center border-b border-line px-8 pb-7 pt-9 text-center">
           <img
-            src="https://media.licdn.com/dms/image/v2/C5103AQHPC-qbGnfG8g/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1569932828822?e=2147483647&v=beta&t=eBiVY2-wVaeHPJs8bz9XnPNk72ITTEakAlShx35baQU"
+            src={LOGO_URL}
             alt="Micronet Solutions"
-            style={loginLogoStyle}
+            className="mb-4 h-20 w-20 rounded-xl object-contain"
           />
-          <h2 style={titleStyle}>GEO - 3D</h2>
-          <p style={subtitleStyle}>Micronet Solutions 3D GIS Viewer</p>
+          <h1 className="text-[26px] font-extrabold uppercase leading-none tracking-[0.18em] text-ink">
+            Geo<span className="text-accent">-3D</span>
+          </h1>
+          <p className="mt-2 text-[11.5px] font-medium text-ink-muted">
+            Micronet Solutions 3D GEO Studio
+          </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* ── Form ── */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-7">
           <div>
-            <label style={labelStyle}>Username</label>
+            <label
+              htmlFor="geo-username"
+              className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.09em] text-ink-muted"
+            >
+              Username
+            </label>
             <input
-              style={inputStyle}
+              id="geo-username"
+              className={fieldClass}
               type="text"
               placeholder="Enter username"
               value={username}
@@ -52,141 +69,72 @@ export default function LoginModal({ onLogin }) {
               autoFocus
             />
           </div>
+
           <div>
-            <label style={labelStyle}>Password</label>
-            <input
-              style={inputStyle}
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <label
+              htmlFor="geo-password"
+              className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.09em] text-ink-muted"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="geo-password"
+                className={`${fieldClass} pr-10`}
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted transition-colors hover:text-ink focus:outline-none"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff size={16} className="shrink-0" />
+                ) : (
+                  <Eye size={16} className="shrink-0" />
+                )}
+              </button>
+            </div>
           </div>
 
           {error && (
-            <div style={errorStyle}>
-              ⚠️ {error}
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-bad/30 bg-bad/10 px-3 py-2.5 text-[11.5px] font-medium text-bad"
+            >
+              <AlertTriangle size={14} className="mt-px shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <button type="submit" style={submitBtnStyle} disabled={loading}>
-            {loading ? "Signing in..." : "🔐 Sign In"}
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-surface-0 transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
-        </form>
 
-        <div style={footerStyle}>
-          Contact your administrator for access
-        </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p className="text-[11px] text-ink-faint">
+              Contact your administrator for access
+            </p>
+            <a
+              href="mailto:hr@micronetsolutions.in"
+              className="text-[11.5px] font-medium text-accent transition-colors hover:underline hover:text-accent-soft"
+            >
+              hr@micronetsolutions.in
+            </a>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-const overlayStyle = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 9999,
-  background: "rgba(0, 0, 0, 0.25)",
-  backdropFilter: "blur(2px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const modalStyle = {
-  background: "rgba(15, 23, 42, 0.88)",
-  border: "1px solid rgba(255, 255, 255, 0.25)",
-  backdropFilter: "blur(10px)",
-  borderRadius: 16,
-  padding: "36px 32px",
-  width: 360,
-  color: "#fff",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-};
-
-const modalHeaderStyle = {
-  textAlign: "center",
-  marginBottom: 28,
-};
-
-const loginLogoStyle = {
-  width: 72,
-  height: 72,
-  borderRadius: 14,
-  objectFit: "contain",
-  background: "#ffffff",
-  padding: 4,
-  border: "2px solid rgba(56, 189, 248, 0.5)",
-  boxShadow: "0 0 24px rgba(56,189,248,0.25)",
-  marginBottom: 8,
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 30,
-  fontWeight: 900,
-  color: "#90cdf4",
-  letterSpacing: "3px",
-  textShadow: "0 0 24px rgba(144,205,244,0.5)",
-};
-
-const subtitleStyle = {
-  margin: "6px 0 0",
-  fontSize: 12,
-  color: "rgba(255,255,255,0.6)",
-  fontWeight: 500,
-};
-
-const labelStyle = {
-  display: "block",
-  fontSize: 11,
-  fontWeight: 700,
-  color: "#90cdf4",
-  textTransform: "uppercase",
-  letterSpacing: "0.5px",
-  marginBottom: 6,
-};
-
-const inputStyle = {
-  width: "100%",
-  background: "rgba(255,255,255,0.08)",
-  border: "1px solid rgba(255,255,255,0.3)",
-  borderRadius: 8,
-  padding: "10px 14px",
-  color: "#fff",
-  fontSize: 14,
-  outline: "none",
-  boxSizing: "border-box",
-  transition: "border-color 0.2s ease",
-};
-
-const errorStyle = {
-  background: "rgba(239,68,68,0.15)",
-  border: "1px solid rgba(239,68,68,0.4)",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 12,
-  color: "#fca5a5",
-  textShadow: "none",
-};
-
-const submitBtnStyle = {
-  background: "linear-gradient(135deg, #3182ce, #2b6cb0)",
-  border: "none",
-  borderRadius: 8,
-  color: "#fff",
-  fontSize: 14,
-  fontWeight: 700,
-  padding: "12px",
-  cursor: "pointer",
-  boxShadow: "0 4px 12px rgba(49,130,206,0.4)",
-  transition: "all 0.2s ease",
-  marginTop: 4,
-};
-
-const footerStyle = {
-  marginTop: 20,
-  textAlign: "center",
-  fontSize: 11,
-  color: "rgba(255,255,255,0.4)",
-};

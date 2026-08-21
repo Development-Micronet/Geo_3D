@@ -22,7 +22,7 @@ function getAuthHeaders() {
       if (user && user.id) {
         return { "X-User-Id": String(user.id) };
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   return {};
 }
@@ -49,7 +49,7 @@ export function getCurrentUser() {
   if (userJson) {
     try {
       return JSON.parse(userJson);
-    } catch (e) {}
+    } catch (e) { }
   }
   return null;
 }

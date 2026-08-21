@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+/* ============================================================
+   GEO-3D DESIGN SYSTEM
+   Dark geospatial command-center palette.
+   All UI colour/spacing decisions derive from these tokens.
+   ============================================================ */
+@theme {
+  /* Surfaces — near-black navy, stepping up as elements elevate */
+  --color-surface-0: #070b12;
+  /* app / viewport backdrop */
+  --color-surface-1: #0b111d;
+  /* docked panels (layer manager) */
+  --color-surface-2: #111a2b;
+  /* toolbar, cards, floating panels */
+  --color-surface-3: #18233a;
+  /* hover / raised card */
+  --color-surface-4: #223148;
+  /* pressed / selected fill */
+
+  /* Hairlines */
+  --color-line: #1c2740;
+  --color-line-strong: #2a3a56;
+
+  /* Accent — cyan, the single hue that signals "active" */
+  --color-accent: #38bdf8;
+  --color-accent-soft: #7dd3fc;
+  --color-accent-deep: #0284c7;
+
+  /* Text */
+  --color-ink: #e8eef7;
+  --color-ink-muted: #8b9bb4;
+  --color-ink-faint: #5d6b83;
+
+  /* Status */
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+
+  /* Type */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas,
+    monospace;
+
+  /* Elevation */
+  --shadow-panel: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
+  --shadow-float: 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: var(--color-surface-0);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric readouts (coordinates, measurements) align in columns */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus ring — visible, never on mouse click */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   SCROLLBARS
+   ============================================================ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b4f72 rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b4f72;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ============================================================
+   RANGE SLIDERS
+   Native range thumbs can't be styled with utility classes,
+   so this is one of the few places custom CSS is required.
+   ============================================================ */
+input[type="range"].geo-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-surface-4);
+  cursor: pointer;
+  outline: none;
+}
+
+input[type="range"].geo-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #0b111d;
+  box-shadow: 0 0 0 1px var(--color-accent);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"].geo-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"].geo-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #0b111d;
+  cursor: pointer;
+}
+
+input[type="range"].geo-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-surface-4);
+}
+
+/* ============================================================
+   ESRI / CALCITE WIDGET NORMALISATION
+   Esri injects its own DOM into our panels (Line of Sight,
+   Measurement, Elevation Profile). These rules make that markup
+   inherit our dark surface. Functionality is untouched.
+   ============================================================ */
+.calcite-mode-dark .esri-widget,
+.esri-component .esri-widget {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  width: 100% !important;
+  color: var(--color-ink) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.calcite-mode-dark .esri-widget__heading,
+.esri-component .esri-widget__heading {
+  color: var(--color-ink) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.calcite-mode-dark .esri-widget--panel,
+.esri-component .esri-widget--panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.calcite-mode-dark .esri-line-of-sight,
+.calcite-mode-dark .esri-direct-line-measurement-3d,
+.calcite-mode-dark .esri-area-measurement-3d,
+.calcite-mode-dark .esri-elevation-profile,
+.calcite-mode-dark .esri-daylight,
+.calcite-mode-dark .esri-weather {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 100% !important;
+}
+
+.calcite-mode-dark .esri-button,
+.esri-component .esri-button {
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+/* Esri body copy inside our panels */
+.calcite-mode-dark .esri-component div,
+.calcite-mode-dark .esri-component span,
+.calcite-mode-dark .esri-component label,
+.calcite-mode-dark .esri-component td,
+.calcite-mode-dark .esri-component p {
+  color: var(--color-ink);
+}
+
+/* ============================================================
+   TOUCH & MOBILE GESTURE OPTIMISATIONS
+   Ensures seamless 2-finger zoom in/out on mobile & tablets
+   ============================================================ */
+.touch-none,
+.esri-view,
+.esri-view-surface,
+.esri-view-root,
+.esri-display-object,
+canvas.esri-display-object {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}

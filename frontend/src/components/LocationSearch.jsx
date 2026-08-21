@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Loader2, MapPin, Search, X } from "lucide-react";
 
-export default function LocationSearch({ viewerRef, placeholder = "Search location or city...", fullWidth = false, containerStyle: customContainerStyle }) {
+export default function LocationSearch({ viewerRef, placeholder = "Search location…", fullWidth = false, className = "" }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,11 +43,11 @@ export default function LocationSearch({ viewerRef, placeholder = "Search locati
             name: c.address,
             extent: c.extent
               ? {
-                  xmin: c.extent.xmin,
-                  ymin: c.extent.ymin,
-                  xmax: c.extent.xmax,
-                  ymax: c.extent.ymax,
-                }
+                xmin: c.extent.xmin,
+                ymin: c.extent.ymin,
+                xmax: c.extent.xmax,
+                ymax: c.extent.ymax,
+              }
               : null,
             center: [c.location.x, c.location.y],
           }));
@@ -70,11 +71,11 @@ export default function LocationSearch({ viewerRef, placeholder = "Search locati
           center: [parseFloat(item.lon), parseFloat(item.lat)],
           extent: item.boundingbox
             ? {
-                xmin: parseFloat(item.boundingbox[2]),
-                ymin: parseFloat(item.boundingbox[0]),
-                xmax: parseFloat(item.boundingbox[3]),
-                ymax: parseFloat(item.boundingbox[1]),
-              }
+              xmin: parseFloat(item.boundingbox[2]),
+              ymin: parseFloat(item.boundingbox[0]),
+              xmax: parseFloat(item.boundingbox[3]),
+              ymax: parseFloat(item.boundingbox[1]),
+            }
             : null,
         }));
         setResults(items);
@@ -111,18 +112,15 @@ export default function LocationSearch({ viewerRef, placeholder = "Search locati
   }
 
   return (
-    <div style={{ ...containerStyle, width: fullWidth ? "100%" : 220, ...customContainerStyle }}>
-      {/* Invisible click outside backdrop */}
-      {isOpen && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 199, background: "transparent" }}
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+    <div className={`relative ${fullWidth ? "w-full" : "w-36 sm:w-48 lg:w-56"} ${className}`}>
+      {/* Click-outside backdrop */}
+      {isOpen && <div className="fixed inset-0 z-[199]" onClick={() => setIsOpen(false)} />}
 
-      {/* Input Field */}
-      <div style={inputWrapperStyle}>
-        <span style={searchIconStyle}>{loading ? "⏳" : "🔍"}</span>
+      {/* Input */}
+      {/* <div className="group relative flex items-center rounded-full border border-line bg-white/[0.04] px-3 transition-colors focus-within:border-accent/60 focus-within:bg-surface-1 hover:border-line-strong">
+        <span className="pointer-events-none flex shrink-0 items-center text-ink-faint">
+          {loading ? <Loader2 size={13} className="animate-spin text-accent" /> : <Search size={13} />}
+        </span>
         <input
           type="text"
           value={query}
@@ -130,118 +128,79 @@ export default function LocationSearch({ viewerRef, placeholder = "Search locati
           onFocus={() => results.length > 0 && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          style={inputStyle}
+          aria-label="Search for a location"
+          className="w-full bg-transparent py-1.5 pl-2 text-[11.5px] font-medium text-ink outline-none placeholder:text-ink-faint"
         />
         {query && (
           <button
+            type="button"
             onClick={() => {
               setQuery("");
               setResults([]);
               setIsOpen(false);
             }}
-            style={clearBtnStyle}
             title="Clear search"
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-white/10 hover:text-ink"
           >
-            ✕
+            <X size={11} />
+          </button>
+        )}
+      </div> */}
+      <div className="group relative flex h-9 w-full items-center rounded-full bg-white/[0.08] px-3">
+        <span className="pointer-events-none flex shrink-0 items-center text-white">
+          {loading ? (
+            <Loader2 size={14} className="animate-spin text-white" />
+          ) : (
+            <Search size={14} className="text-white" />
+          )}
+        </span>
+
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => results.length > 0 && setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          aria-label="Search for a location"
+          className="!border-0 !outline-none !ring-0 !shadow-none focus:!border-0 focus:!outline-none focus:!ring-0 focus:!shadow-none focus-visible:!border-0 focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!shadow-none w-full min-w-0 bg-transparent py-1.5 pl-2 text-[11.5px] font-medium text-white placeholder:text-white"
+        />
+
+        {query && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setResults([]);
+              setIsOpen(false);
+            }}
+            title="Clear search"
+            className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/20 hover:text-white"
+          >
+            <X size={11} className="text-white" />
           </button>
         )}
       </div>
 
-      {/* Suggestions Dropdown */}
+
+      {/* Suggestions */}
       {isOpen && results.length > 0 && (
-        <div style={dropdownStyle}>
+        <div className="absolute right-0 top-[calc(100%+8px)] z-[201] max-h-60 w-72 overflow-y-auto rounded-xl border border-line bg-surface-2/95 p-1.5 shadow-panel backdrop-blur-xl">
           {results.map((item) => (
-            <div
+            <button
               key={item.id}
+              type="button"
               onClick={() => handleSelect(item)}
-              style={itemStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56, 189, 248, 0.15)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent/10"
             >
-              <span style={{ fontSize: 13, flexShrink: 0 }}>📍</span>
-              <span style={itemTextStyle}>{item.name}</span>
-            </div>
+              <MapPin size={13} className="shrink-0 text-accent" />
+              <span className="truncate text-[11.5px] text-ink-muted" title={item.name}>
+                {item.name}
+              </span>
+            </button>
           ))}
         </div>
       )}
     </div>
   );
 }
-
-/* ─── Styles ─── */
-
-const containerStyle = {
-  position: "relative",
-  width: 220,
-};
-
-const inputWrapperStyle = {
-  display: "flex",
-  alignItems: "center",
-  background: "rgba(15, 23, 42, 0.85)",
-  border: "1px solid rgba(255, 255, 255, 0.18)",
-  borderRadius: 20,
-  padding: "6px 12px",
-  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-  transition: "all 0.2s ease",
-};
-
-const searchIconStyle = {
-  fontSize: 13,
-  marginRight: 6,
-  color: "#94a3b8",
-  display: "flex",
-  alignItems: "center",
-};
-
-const inputStyle = {
-  width: "100%",
-  background: "transparent",
-  border: "none",
-  outline: "none",
-  color: "#f8fafc",
-  fontSize: 12,
-  fontWeight: 500,
-};
-
-const clearBtnStyle = {
-  background: "transparent",
-  border: "none",
-  color: "#94a3b8",
-  fontSize: 11,
-  cursor: "pointer",
-  padding: "0 2px",
-  lineHeight: 1,
-};
-
-const dropdownStyle = {
-  position: "absolute",
-  top: "calc(100% + 8px)",
-  right: 0,
-  width: 280,
-  background: "rgba(15, 23, 42, 0.95)",
-  border: "1px solid rgba(255, 255, 255, 0.18)",
-  borderRadius: 12,
-  padding: "6px 0",
-  boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
-  zIndex: 201,
-  maxHeight: 240,
-  overflowY: "auto",
-};
-
-const itemStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "8px 12px",
-  cursor: "pointer",
-  transition: "background 0.15s ease",
-};
-
-const itemTextStyle = {
-  fontSize: 12,
-  color: "#e2e8f0",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};

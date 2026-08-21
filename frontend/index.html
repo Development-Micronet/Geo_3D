@@ -3,148 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b12" />
     <title>GEO3D | Micronet Solutions 3D GIS Viewer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-      html, body, #root { 
-        margin: 0; 
-        padding: 0; 
-        height: 100%; 
-        width: 100%; 
-        overflow: hidden; 
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      }
-      /* Custom scrollbars for glassmorphic drawers */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: rgba(15, 23, 42, 0.4);
-      }
-      ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.35);
-      }
-      /* Clean Esri Widget styling inside custom sidebar panels */
-      .calcite-mode-dark .esri-widget,
-      .esri-component .esri-widget {
-        background: transparent !important;
-        box-shadow: none !important;
-        border: none !important;
-        width: 100% !important;
-        color: #f8fafc !important;
-      }
-      .calcite-mode-dark,
-      .esri-component,
-      .calcite-mode-dark div,
-      .esri-component div,
-      .calcite-mode-dark span,
-      .esri-component span,
-      .calcite-mode-dark label,
-      .esri-component label,
-      .calcite-mode-dark td,
-      .esri-component td,
-      .calcite-mode-dark p,
-      .esri-component p {
-        color: #ffffff;
-        font-weight: 600 !important;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.5) !important;
-      }
-      .panel-title,
-      .panel-title div,
-      .panel-title span {
-        font-weight: 900 !important;
-        color: #90cdf4 !important;
-      }
-      .calcite-mode-dark .esri-widget--panel,
-      .esri-component .esri-widget--panel {
-        width: 100% !important;
-        max-width: 100% !important;
-        background: transparent !important;
-      }
-      .calcite-mode-dark .esri-slice,
-      .calcite-mode-dark .esri-line-of-sight,
-      .calcite-mode-dark .esri-direct-line-measurement-3d,
-      .calcite-mode-dark .esri-area-measurement-3d,
-      .calcite-mode-dark .esri-elevation-profile,
-      .calcite-mode-dark .esri-daylight,
-      .calcite-mode-dark .esri-weather {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: 100% !important;
-      }
-      .calcite-mode-dark .esri-button,
-      .esri-component .esri-button {
-        border-radius: 6px !important;
-      }
-
-      /* Hide scrollbar in top navbar tools */
-      .responsive-tools-group::-webkit-scrollbar,
-      .responsive-top-navbar::-webkit-scrollbar {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-      }
-      .responsive-tools-group,
-      .responsive-top-navbar {
-        scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
-      }
-
-      /* ─── Global Responsive Media Queries ─── */
-      @media (max-width: 1280px) {
-        .responsive-tools-group {
-          margin-left: 12px !important;
-        }
-      }
-      @media (max-width: 1024px) {
-        .responsive-tools-group {
-          margin-left: 10px !important;
-        }
-      }
-      @media (max-width: 768px) {
-        html, body {
-          font-size: 14px;
-        }
-        .responsive-top-navbar {
-          padding: 0 8px !important;
-          gap: 6px !important;
-        }
-        .responsive-title-text {
-          font-size: 18px !important;
-          letter-spacing: 1px !important;
-        }
-        .responsive-tools-group {
-          margin-left: 5px !important;
-          gap: 4px !important;
-        }
-        .responsive-tool-btn {
-          font-size: 10.5px !important;
-          padding: 4px 6px !important;
-        }
-        .responsive-panel {
-          max-width: 94vw !important;
-          right: 3vw !important;
-          left: auto !important;
-        }
-      }
-      @media (max-width: 480px) {
-        .responsive-title-text {
-          font-size: 15px !important;
-        }
-        .responsive-logo {
-          width: 32px !important;
-          height: 32px !important;
-        }
-      }
-    </style>
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

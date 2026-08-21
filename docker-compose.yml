@@ -33,12 +33,15 @@ services:
       POSTGRES_PASSWORD: admin
       SLPK_CORS_ORIGINS: "*"
       SLPK_PUBLIC_BASE_URL: ""
+      SLPK_UPLOAD_DIR: "/data/uploads"
+      SLPK_EXTRACT_DIR: "/data/extracted"
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
     volumes:
+      - ./geo3d_backend:/app
       - slpk_data:/data
 
   # ── React Frontend ──────────────────────────────────────────────

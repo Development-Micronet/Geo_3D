@@ -18,14 +18,6 @@ const ALL_TOOLS = [
     desc: "Simulate sun position, direct sunlight, and shadows by date and time.",
   },
   {
-    id: "slice",
-    label: "3D Slice & Cross Section",
-    icon: "🔪",
-    badge: "CLIPPING",
-    title: "3D Slicing & Volumetric Cross-Section Tool",
-    desc: "Clip and inspect internal cross-sections of 3D mesh buildings and terrain.",
-  },
-  {
     id: "lineOfSight",
     label: "Line of Sight",
     icon: "👁️",

@@ -12,7 +12,7 @@ export function getApiBase() {
           u.hostname = hostname;
           return u.toString().replace(/\/+$/, "");
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return clean;
   }
@@ -57,6 +57,19 @@ async function handle(res) {
   return res.json();
 }
 
+function getAuthHeaders() {
+  const userJson = typeof localStorage !== "undefined" ? localStorage.getItem("geo3d_user") : null;
+  if (userJson) {
+    try {
+      const user = JSON.parse(userJson);
+      if (user && user.id) {
+        return { "X-User-Id": String(user.id) };
+      }
+    } catch (e) { }
+  }
+  return {};
+}
+
 export async function uploadSlpk(file, onProgress) {
   const form = new FormData();
   form.append("file", file);
@@ -64,6 +77,10 @@ export async function uploadSlpk(file, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${API_BASE}/api/upload`);
+    const headers = getAuthHeaders();
+    Object.entries(headers).forEach(([k, v]) => {
+      xhr.setRequestHeader(k, v);
+    });
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));
@@ -96,6 +113,10 @@ export async function getPackage(id) {
 }
 
 export async function deletePackage(id) {
-  const res = await fetch(`${API_BASE}/api/packages/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/api/packages/${id}`, {
+    method: "DELETE",
+    headers: { ...getAuthHeaders() },
+  });
   return handle(res);
 }
+

@@ -178,8 +178,9 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 # SLPK GIS Storage Configuration
-UPLOAD_DIR = Path(os.getenv("SLPK_UPLOAD_DIR", BASE_DIR / "storage" / "uploads"))
-EXTRACT_DIR = Path(os.getenv("SLPK_EXTRACT_DIR", BASE_DIR / "storage" / "extracted"))
+_default_data_dir = Path("/data") if Path("/data").exists() else BASE_DIR / "storage"
+UPLOAD_DIR = Path(os.getenv("SLPK_UPLOAD_DIR", _default_data_dir / "uploads"))
+EXTRACT_DIR = Path(os.getenv("SLPK_EXTRACT_DIR", _default_data_dir / "extracted"))
 MAX_UPLOAD_SIZE = int(os.getenv("SLPK_MAX_UPLOAD_SIZE", 2 * 1024 * 1024 * 1024))
 PUBLIC_BASE_URL = os.getenv("SLPK_PUBLIC_BASE_URL", "")
 
