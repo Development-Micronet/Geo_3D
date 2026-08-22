@@ -1,23 +1,11 @@
 export function getApiBase() {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
-  const protocol = typeof window !== "undefined" && window.location.protocol ? window.location.protocol : "http:";
-  const hostname = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
 
-  if (envUrl && envUrl.trim() !== "") {
-    let clean = envUrl.trim().replace(/\/+$/, "");
-    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-      try {
-        const u = new URL(clean);
-        if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
-          u.hostname = hostname;
-          return u.toString().replace(/\/+$/, "");
-        }
-      } catch (e) { }
-    }
-    return clean;
+  if (!envUrl) {
+    throw new Error("VITE_API_BASE_URL is not configured");
   }
 
-  return `${protocol}//${hostname}:8000`;
+  return envUrl.trim().replace(/\/+$/, "");
 }
 
 export const API_BASE = getApiBase();

@@ -142,6 +142,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.*",
     "http://10.*",
     "http://172.*",
+    "http://13.202.113.121",
+    "http://13.202.113.121:8000",
+    "http://13.202.113.121:9094"
 ]
 # CSRF_TRUSTED_ORIGINS = [
 #     "http://localhost:5173",
