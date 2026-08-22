@@ -1,5 +1,5 @@
 export function getApiBase() {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const envUrl = import.meta.env.VITE_API_BASE_URL || "http://13.202.113.121:8000";
 
   if (!envUrl) {
     throw new Error("VITE_API_BASE_URL is not configured");
