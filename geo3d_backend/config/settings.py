@@ -134,26 +134,24 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 APPEND_SLASH = False
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://192.168.*",
-    "http://10.*",
-    "http://172.*",
-    "http://13.202.113.121",
-    "http://13.202.113.121:8000",
-    "http://13.202.113.121:9094"
-]
 # CSRF_TRUSTED_ORIGINS = [
 #     "http://localhost:5173",
 #     "http://127.0.0.1:5173",
 #     "http://localhost:8000",
 #     "http://127.0.0.1:8000",
-#     "http://13.202.113.121",
-#     "http://13.202.113.121:8000",
+#     "http://192.168.*",
+#     "http://10.*",
+#     "http://172.*",
 # ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://13.202.113.121",
+    "http://13.202.113.121:8000",
+    "http://13.202.113.121:9094/"
+]
 
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
